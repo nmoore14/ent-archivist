@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="src">
+    <Project Path="src/Archivist.Api/Archivist.Api.csproj" />
+    <Project Path="src/Archivist.Application/Archivist.Application.csproj" />
+    <Project Path="src/Archivist.Contracts/Archivist.Contracts.csproj" />
+    <Project Path="src/Archivist.Domain/Archivist.Domain.csproj" />
+    <Project Path="src/Archivist.Infrastructure/Archivist.Infrastructure.csproj" />
+    <Project Path="src/Archivist.Worker/Archivist.Worker.csproj" />
+  </Folder>
+  <Folder Name="tests">
+    <Project Path="tests/Archivist.Api.Tests/Archivist.Api.Tests.csproj" />
+    <Project Path="tests/Archivist.Application.Tests/Archivist.Application.Tests.csproj" />
+  </Folder>
+</Solution>

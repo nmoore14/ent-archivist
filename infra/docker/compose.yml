@@ -1,0 +1,77 @@
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api.dev
+    working_dir: /workspace
+    command: >
+      dotnet watch --project src/Archivist.Api/Archivist.Api.csproj run
+      --urls http://0.0.0.0:8080
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      DOTNET_USE_POLLING_FILE_WATCHER: "1"
+      ConnectionStrings__Archivist: Server=sqlserver,1433;Database=archivist;User Id=sa;Password=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env};Encrypt=False;TrustServerCertificate=True
+    ports:
+      - "${ARCHIVIST_API_PORT:-5080}:8080"
+    volumes:
+      - ../..:/workspace
+      - nuget-packages:/root/.nuget/packages
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.worker.dev
+    working_dir: /workspace
+    command: dotnet watch --project src/Archivist.Worker/Archivist.Worker.csproj run
+    environment:
+      DOTNET_ENVIRONMENT: Development
+      DOTNET_USE_POLLING_FILE_WATCHER: "1"
+      ConnectionStrings__Archivist: Server=sqlserver,1433;Database=archivist;User Id=sa;Password=${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env};Encrypt=False;TrustServerCertificate=True
+    volumes:
+      - ../..:/workspace
+      - nuget-packages:/root/.nuget/packages
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.web.dev
+    working_dir: /workspace/web
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
+    environment:
+      NUXT_PUBLIC_API_BASE: http://localhost:${ARCHIVIST_API_PORT:-5080}
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../..:/workspace
+      - web-node-modules:/workspace/web/node_modules
+    depends_on:
+      api:
+        condition: service_started
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  sqlserver-data:
+  nuget-packages:
+  web-node-modules:
